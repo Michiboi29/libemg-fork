@@ -484,6 +484,14 @@ class Myo(object):
 	def set_leds(self, logo, line):
 		self.write_attr(0x19, pack('8B', 6, 6, *(logo + line)))
 
+	def unlock(self):
+		command_attribute_address = 0x19
+		command_type = 0x0a # i.e., specify the `unlocked` status of the band 
+		payload_size = 1
+		mode = 2 # unlock indefinitely (until a "lock" command (i.e., mode=0) is issued)
+		self.write_attr(command_attribute_address, pack('3B', command_type, payload_size, mode))
+
+
 	# def get_battery_level(self):
 	#     battery_level = self.read_attr(0x11)
 	#     return ord(battery_level.payload[5])
@@ -545,6 +553,7 @@ class MyoStreamer:
 		m.vibrate(3)
 		# Disable vibrations
 		m.vibrate(0)
+		m.unlock()
 
 
 		while True:

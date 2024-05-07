@@ -463,8 +463,26 @@ class OnlineEMGClassifier:
             print(f"Connected by {addr}")
 
         self.process = Process(target=self._run_helper, daemon=True,)
+        self.process2 = Process(target=self.force_level, daemon=True,)
         self.std_out = std_out
-        self.previous_predictions = deque(maxlen=self.classifier.majority_vote)
+        # self.previous_predictions = deque(maxlen=self.classifier.majority_vote)
+
+    def force_level(self):
+        fe = FeatureExtractor()
+        while True:
+            data = np.array(self.raw_data.get_emg())
+            if len(data) >= self.window_size:
+                window = get_windows(data[-self.window_size:][:], self.window_increment, self.window_size)
+                feat = fe.extract_features(['RMS'], window, array=True)[0]
+                scaled = min([1.0, max([0, (np.mean(feat) - self.min_thresh) / (self.max_thresh - self.min_thresh)])])
+                self.raw_data.adjust_increment(self.window_size, self.window_increment)
+                self.sock.sendto(bytes(str(scaled), "utf-8"), ('127.0.0.1', 12346))
+
+    def run_force(self, block=True):
+        if block:
+            self.force_level()
+        else:
+            self.process2.start()
         
     def run(self, block=True):
         """Runs the classifier - continuously streams predictions over UDP.

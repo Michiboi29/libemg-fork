@@ -8,6 +8,7 @@ from threading import Thread
 from PIL import ImageTk, Image
 from os import walk
 import random
+import matplotlib.pyplot as plt
 random.seed(time.time())
 
 class ScreenGuidedTraining:
@@ -138,6 +139,9 @@ class _SGTUI:
         self.window.mainloop()
 
     def _on_closing(self):
+        plt.close()
+        plt.clf()
+        plt.cla()
         self.window.destroy()
 
     def _accumulate_training_images(self):
@@ -281,6 +285,8 @@ class _SGTUI:
                         redo_gest = Button(self.window, text = 'Redo', font = ("Arial", 12), command=self._redo)
                         next_gest.pack()
                         redo_gest.pack()
+                        plt.plot(emg_data[self.og_inputs.index(file)])
+                        plt.show()
                         while(self.wait_state == 0):
                             pass 
                         if self.wait_state != -1: 
@@ -291,6 +297,8 @@ class _SGTUI:
                     elif (not self.wait and val == 1) or file == self.inputs[-1]:
                         file_index += 1
 
+            plt.plot(emg_data[self.og_inputs.index(file)])
+            plt.show()
             self._write_data(emg_data, imu_data, other_data)
             self.rep_number += 1
             self.next_rep_button = Button(self.window, text = 'Next Rep', font = ("Arial", 12), command=self._next_rep)
@@ -316,7 +324,7 @@ class _SGTUI:
         self.next_rep_button.destroy()
         self.redo_rep_button.destroy()
         self._collect_data_in_thread()
-        
+ 
     def _bar_count_down(self, seconds):
         self.pb['value'] = 0
         for i in range (0, seconds):
