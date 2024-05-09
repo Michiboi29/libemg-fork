@@ -535,6 +535,7 @@ class MyoStreamer:
 			mode = emg_mode.RAW
 		m = Myo(mode=mode)
 		m.connect()
+		print("Connected!")
 
 		def write_emg(emg, _):
 			data_arr = pickle.dumps(list(emg))

@@ -472,8 +472,8 @@ class OnlineEMGClassifier:
         while True:
             data = np.array(self.raw_data.get_emg())
             if len(data) >= self.window_size:
-                window = get_windows(data[-self.window_size:][:], self.window_increment, self.window_size)
-                feat = fe.extract_features(['RMS'], window, array=True)[0]
+                window = get_windows(data[-self.window_size:][:], self.window_size, self.window_size)
+                feat = fe.extract_features(['MAV'], window, array=True)[0]
                 scaled = min([1.0, max([0, (np.mean(feat) - self.min_thresh) / (self.max_thresh - self.min_thresh)])])
                 self.raw_data.adjust_increment(self.window_size, self.window_increment)
                 self.sock.sendto(bytes(str(scaled), "utf-8"), ('127.0.0.1', 12346))
@@ -497,6 +497,12 @@ class OnlineEMGClassifier:
             self._run_helper()
         else:
             self.process.start()
+
+    def stop_force(self):
+        """Kills the process streaming classification decisions.
+        """
+        self.process2.terminate()
+
 
     def stop_running(self):
         """Kills the process streaming classification decisions.
