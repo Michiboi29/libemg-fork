@@ -285,8 +285,8 @@ class _SGTUI:
                         redo_gest = Button(self.window, text = 'Redo', font = ("Arial", 12), command=self._redo)
                         next_gest.pack()
                         redo_gest.pack()
-                        plt.plot(emg_data[self.og_inputs.index(file)])
-                        plt.show()
+                        # plt.plot(emg_data[self.og_inputs.index(file)])
+                        # plt.show()
                         while(self.wait_state == 0):
                             pass 
                         if self.wait_state != -1: 
@@ -297,8 +297,8 @@ class _SGTUI:
                     elif (not self.wait and val == 1) or file == self.inputs[-1]:
                         file_index += 1
 
-            plt.plot(emg_data[self.og_inputs.index(file)])
-            plt.show()
+            # plt.plot(emg_data[self.og_inputs.index(file)])
+            # plt.show()
             self._write_data(emg_data, imu_data, other_data)
             self.rep_number += 1
             self.next_rep_button = Button(self.window, text = 'Next Rep', font = ("Arial", 12), command=self._next_rep)
