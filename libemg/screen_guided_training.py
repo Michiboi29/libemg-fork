@@ -139,9 +139,7 @@ class _SGTUI:
         self.window.mainloop()
 
     def _on_closing(self):
-        plt.close()
-        plt.clf()
-        plt.cla()
+        print("Closing window!")
         self.window.destroy()
 
     def _accumulate_training_images(self):
