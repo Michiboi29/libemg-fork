@@ -402,7 +402,7 @@ def oymotion_streamer(shared_memory_items=None, sampling_rate=1000, emg=True,imu
 
 
 
-def emager_streamer(shared_memory_items = None):
+def emager_streamer(shared_memory_items = None, specified_port=None):
     """The streamer for the emager armband. 
 
     This function connects to the emager cuff and streams its data over a serial port and access it via shared memory.
@@ -425,7 +425,7 @@ def emager_streamer(shared_memory_items = None):
 
     for item in shared_memory_items:
         item.append(Lock())
-    ema = EmagerStreamer(shared_memory_items)
+    ema = EmagerStreamer(shared_memory_items, specified_port)
     ema.start()
     return ema, shared_memory_items
 

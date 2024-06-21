@@ -107,15 +107,20 @@ class DataCollectionPanel:
 
 
     def start_callback(self):
-        if self.gui.online_data_handler and sum(list(self.gui.online_data_handler.get_data()[1].values())):
-            self.get_settings()
-            dpg.delete_item("__dc_configuration_window")
-            self.cleanup_window("configuration")
-            media_list = self.gather_media()
+        try:
+            if self.gui.online_data_handler and sum(list(self.gui.online_data_handler.get_data()[1].values())):
+                self.get_settings()
+                dpg.delete_item("__dc_configuration_window")
+                self.cleanup_window("configuration")
+                media_list = self.gather_media()
 
-            self.spawn_collection_thread = threading.Thread(target=self.spawn_collection_window, args=(media_list,))
-            self.spawn_collection_thread.start()
-            # self.spawn_collection_window(media_list)
+                self.spawn_collection_thread = threading.Thread(target=self.spawn_collection_window, args=(media_list,))
+                self.spawn_collection_thread.start()
+                # self.spawn_collection_window(media_list)
+            else:
+                print("No data streamer found. Please start a streamer before collecting data.")
+        except Exception as e:
+            print("Start Error: ", e)
 
     def get_settings(self):
         self.num_reps      = int(dpg.get_value("__dc_num_reps"))
