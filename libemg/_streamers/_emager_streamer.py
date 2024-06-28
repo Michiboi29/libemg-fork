@@ -83,7 +83,6 @@ class Emager:
                 raw_data_packet = self.ser.read(bytesToRead)
                 data_packet = reorder(list(raw_data_packet), self.mask, 63)
                 if data_packet is None:
-                    print("Data packet is None")
                     continue
                 if len(data_packet) > 0:
                     for p in range(len(data_packet)):
