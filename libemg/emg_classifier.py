@@ -723,12 +723,13 @@ class OnlineEMGClassifier(OnlineStreamer):
         
         files = {}
         while True:
-            if not self.options["smm"].get_variable("active_flag")[0,0]:
-                continue
+            if self.smm:
+                if not self.options["smm"].get_variable("active_flag")[0,0]:
+                    continue
 
-            if not (self.options["smm"].get_variable("adapt_flag")[0][0] == -1):
-                self.load_emg_classifier(self.options["smm"].get_variable("adapt_flag")[0][0])
-                self.options["smm"].modify_variable("adapt_flag", lambda x: -1)
+                if not (self.options["smm"].get_variable("adapt_flag")[0][0] == -1):
+                    self.load_emg_classifier(self.options["smm"].get_variable("adapt_flag")[0][0])
+                    self.options["smm"].modify_variable("adapt_flag", lambda x: -1)
 
             val, count = self.odh.get_data(N=self.window_size)
             modality_ready = [count[mod] > self.expected_count[mod] for mod in self.odh.modalities]

@@ -5,25 +5,26 @@ import numpy as np
 from multiprocessing import Process
 from libemg.shared_memory_manager import SharedMemoryManager
 
-def reorder(data, mask, match_result):
+def reorder(data, mask, match_result, packet_size=128):
     '''
+    Use to find the start of a packet in the data array and reorder it from the found starting point.
     Looks for mask/template matching in data array and reorders
     :param data: (numpy array) - 1D data input
     :param mask: (numpy array) - 1D mask to be matched
     :param match_result: (int) - Expected result of mask-data convolution matching
     :return: (numpy array) - Reordered data array
     '''
-    number_of_packet = int(len(data)/128)
+    number_of_packet = int(len(data)//packet_size)
     roll_data = []
     for i in range(number_of_packet):
-        data_lsb = data[i*128:(i+1)*128] & np.ones(128, dtype=np.int8)
+        data_lsb = data[i*packet_size:(i+1)*packet_size] & np.ones(packet_size, dtype=np.int8)
         mask_match = np.convolve(mask, np.append(data_lsb, data_lsb), 'valid')
         try:
             offset = np.where(mask_match == match_result)[0][0] - 3
         except IndexError:
             print("No match found")
             return None
-        roll_data.append(np.roll(data[i*128:(i+1)*128], -offset))
+        roll_data.append(np.roll(data[i*packet_size:(i+1)*packet_size], -offset))
     return roll_data
 
 class Emager:
@@ -47,10 +48,10 @@ class Emager:
             print("Failed to connect to serial port: " + com_port, str(e))
             return
         
-
-        self.bytes_to_read = 128
+        self.num_channels = 64
+        self.packet_size = 128
         ### ^ Number of bytes in message (i.e. channel bytes + header/tail bytes)
-        self.mask = np.array([0, 2] + [0, 1] * 63)
+        self.mask = np.array([0, 2] + [0, 1] * (self.num_channels-1))
         ### ^ Template mask for template matching on input data
         self.channelMap = [10, 22, 12, 24, 13, 26, 7, 28, 1, 30, 59, 32, 53, 34, 48, 36] + \
                           [62, 16, 14, 21, 11, 27, 5, 33, 63, 39, 57, 45, 51, 44, 50, 40] + \
@@ -69,28 +70,32 @@ class Emager:
 
     def run(self):
         self.connect()
-        samples = np.zeros(64)
+        samples = np.zeros(self.num_channels)
         while True:
-            # get and organize data
+            # wait for data
             bytesToRead = 0
-            while bytesToRead < 128:
+            while bytesToRead < self.packet_size:
                 bytes_available = self.ser.in_waiting
-                bytesToRead = bytes_available - (bytes_available % 128)
+                bytesToRead = bytes_available - (bytes_available % self.packet_size)
                 time.sleep(0.02)
 
-            # if there was data
-            if bytesToRead > 0:
-                raw_data_packet = self.ser.read(bytesToRead)
-                data_packet = reorder(list(raw_data_packet), self.mask, 63)
-                if data_packet is None:
-                    continue
-                if len(data_packet) > 0:
-                    for p in range(len(data_packet)):
-                        samples = [int.from_bytes(bytes([data_packet[p][s*2], data_packet[p][s*2+1]]), 'big',signed=True) for s in range(64)]
-                        for h in self.emg_handlers:
-                            h(samples)
-            else:
+            # read data if there was data
+            raw_data_packet = self.ser.read(bytesToRead)
+            # find start of packet
+            data_packet = reorder(list(raw_data_packet), self.mask, self.num_channels-1, self.packet_size)
+            if data_packet is None:
+                print("No valid packets found")
                 continue
+            if len(data_packet) > 0:
+                for p in range(len(data_packet)):
+                    # Fuse two bytes into one 16-bit integer
+                    samples = [int.from_bytes(bytes([data_packet[p][s*2], data_packet[p][s*2+1]]), 'big',signed=True) for s in range(self.num_channels)]
+
+                    # Reorder the samples according to the channel map
+                    samples = np.array(samples)[self.channelMap]
+                    # Add the samples to the shared memory
+                    for h in self.emg_handlers:
+                        h(samples)
     
     def clear_buffer(self):
         '''
