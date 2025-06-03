@@ -1015,6 +1015,7 @@ class OnlineEMGClassifier(OnlineStreamer):
         cmap = cm.get_cmap('turbo', num_classes)
 
         controller = ClassifierController(output_format=self.output_format, num_classes=num_classes, ip=self.ip, port=self.port)
+        controller.start()
 
         if legend is not None:
             for i in range(num_classes):
@@ -1201,6 +1202,7 @@ class OnlineEMGRegressor(OnlineStreamer):
         ax.set_ylabel('Prediction')
 
         controller = RegressorController(ip=self.ip, port=self.port)
+        controller.start()
 
         # Wait for controller to start receiving data
         predictions = None

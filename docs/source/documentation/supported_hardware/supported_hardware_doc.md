@@ -26,6 +26,7 @@ By default, LibEMG supports several hardware devices (shown in Table 1).
 <!-- - The [**OTBioelettronica**](https://otbioelettronica.it/hardware/) devices are a set of commercially available HDEMG systems. -->
 - The [**MindRove Armband**](https://mindrove.com/armband/) is a commercial device that samples 8-channel EMG at 500 Hz (24 bit) and IMU at 50 Hz. Data are streamed over a Wifi connection.
 
+
 If selecting EMG hardware for real-time use, wireless armbands that sample above 500 Hz are preferred. Additionally, future iterations of LibEMG will include Inertial Measurement Unit (IMU) support. As such, devices should have IMUs to enable more interaction opportunities.
 
 | <center>Hardware</center> | <center>Function</center> | <center>Image</center> |
