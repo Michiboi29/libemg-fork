@@ -10,6 +10,9 @@ All documentation can be found at: [Library Documentation](https://libemg.github
 ## Install 
 `pip install libemg`
 
+## Contributing 
+We are happy to have people contribute to LibEMG! Make sure that any changes are made off the `latest` branch. This branch should also be the target for any pull request. We will review all pull requests as soon as possible! 
+
 ## Questions
 Check out our discord server if you have questions, comments, or feature requests: [https://discord.gg/NeqTTXmM4F](https://discord.gg/6D9rPMThxu)
 
