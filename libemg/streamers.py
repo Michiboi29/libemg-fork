@@ -19,6 +19,7 @@ from libemg._streamers._mindrove import MindroveStreamer
 
 def sifi_biopoint_streamer(
     name = "BioPoint_v1_3",
+    device_id = None,
     shared_memory_items = None,
     ecg = False,
     emg = True, 
@@ -107,11 +108,13 @@ def sifi_biopoint_streamer(
             shared_memory_items.append(["ppg",       (200,4), np.double])
             shared_memory_items.append(["ppg_count", (1,1),    np.int32])
 
+    # if device_id is None or device_id == "" or device_id == 0:
     for item in shared_memory_items:
         item.append(Lock())
         
     sb = SiFiBridgeStreamer(
         name,
+        device_id,
         shared_memory_items,
         ecg,
         emg,

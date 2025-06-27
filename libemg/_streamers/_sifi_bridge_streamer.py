@@ -51,6 +51,7 @@ class SiFiBridgeStreamer(Process):
     def __init__(
         self,
         name: str | None = None,
+        device_id: int | None = None,
         shared_memory_items: list = [],
         ecg:            bool = False,
         emg:            bool = True,
@@ -80,9 +81,11 @@ class SiFiBridgeStreamer(Process):
         self.eda_handlers = []
         self.ecg_handlers = []
         self.ppg_handlers = []
+        self.temp_handlers = []
 
 
         self.name = name
+        self.device_id = device_id if device_id is not None else ""
         self.ecg = ecg
         self.emg = emg
         self.eda = eda
@@ -124,6 +127,8 @@ class SiFiBridgeStreamer(Process):
         self.sb.set_low_latency_mode(streaming)
         self.sb.set_ble_power(ble_power)
         self.sb.set_memory_mode(memory_mode)
+        
+        
 
     def connect(self):
         while not self.sb.connect(self.handle):
@@ -149,6 +154,9 @@ class SiFiBridgeStreamer(Process):
 
     def add_eda_handler(self, closure: Callable):
         self.eda_handlers.append(closure)
+        
+    def add_temperature_handler(self, closure: Callable):
+        self.temp_handlers.append(closure)
 
     def process_packet(self, data: dict):
         if "data" in list(data.keys()):
@@ -212,6 +220,10 @@ class SiFiBridgeStreamer(Process):
                     self.old_ppg_packet = None
                     for h in self.ppg_handlers:
                         h(ppg)
+            if "temperature" in list(data["data"].keys()):
+                temperature = np.stack((data["data"]["temperature"],)).T
+                for h in self.temp_handlers:
+                    h(temperature)
 
     def run(self):
         # process is started beyond this point!
@@ -241,20 +253,20 @@ class SiFiBridgeStreamer(Process):
         def write_emg(emg):
             # update the samples in "emg"
             self.smm.modify_variable(
-                "emg", lambda x: np.vstack((np.flip(emg, 0), x))[: x.shape[0], :]
+                f"emg{self.device_id}", lambda x: np.vstack((np.flip(emg, 0), x))[: x.shape[0], :]
             )
             # update the number of samples retrieved
-            self.smm.modify_variable("emg_count", lambda x: x + emg.shape[0])
+            self.smm.modify_variable(f"emg{self.device_id}_count", lambda x: x + emg.shape[0])
 
         self.add_emg_handler(write_emg)
 
         def write_imu(imu):
             # update the samples in "imu"
             self.smm.modify_variable(
-                "imu", lambda x: np.vstack((np.flip(imu, 0), x))[: x.shape[0], :]
+                f"imu{self.device_id}", lambda x: np.vstack((np.flip(imu, 0), x))[: x.shape[0], :]
             )
             # update the number of samples retrieved
-            self.smm.modify_variable("imu_count", lambda x: x + imu.shape[0])
+            self.smm.modify_variable(f"imu{self.device_id}_count", lambda x: x + imu.shape[0])
             # sock.sendto(data_arr, (self.ip, self.port))
 
         self.add_imu_handler(write_imu)
@@ -262,33 +274,43 @@ class SiFiBridgeStreamer(Process):
         def write_eda(eda):
             # update the samples in "eda"
             self.smm.modify_variable(
-                "eda", lambda x: np.vstack((np.flip(eda, 0), x))[: x.shape[0], :]
+                f"eda{self.device_id}", lambda x: np.vstack((np.flip(eda, 0), x))[: x.shape[0], :]
             )
             # update the number of samples retrieved
-            self.smm.modify_variable("eda_count", lambda x: x + eda.shape[0])
+            self.smm.modify_variable(f"eda{self.device_id}_count", lambda x: x + eda.shape[0])
 
         self.add_eda_handler(write_eda)
 
         def write_ppg(ppg):
             # update the samples in "ppg"
             self.smm.modify_variable(
-                "ppg", lambda x: np.vstack((np.flip(ppg, 0), x))[: x.shape[0], :]
+                f"ppg{self.device_id}", lambda x: np.vstack((np.flip(ppg, 0), x))[: x.shape[0], :]
             )
             # update the number of samples retrieved
-            self.smm.modify_variable("ppg_count", lambda x: x + ppg.shape[0])
+            self.smm.modify_variable(f"ppg{self.device_id}_count", lambda x: x + ppg.shape[0])
 
         self.add_ppg_handler(write_ppg)
 
         def write_ecg(ecg):
             # update the samples in "ecg"
             self.smm.modify_variable(
-                "ecg", lambda x: np.vstack((np.flip(ecg, 0), x))[: x.shape[0], :]
+                f"ecg{self.device_id}", lambda x: np.vstack((np.flip(ecg, 0), x))[: x.shape[0], :]
             )
             # update the number of samples retrieved
-            self.smm.modify_variable("ecg_count", lambda x: x + ecg.shape[0])
+            self.smm.modify_variable(f"ecg{self.device_id}_count", lambda x: x + ecg.shape[0])
 
         self.add_ecg_handler(write_ecg)
+        
+        def write_temperature(temperature):
+            # update the samples in "temperature"
+            self.smm.modify_variable(
+                f"temp{self.device_id}", lambda x: np.vstack((np.flip(temperature, 0), x))[: x.shape[0], :]
+            )
+            # update the number of samples retrieved
+            self.smm.modify_variable(f"temp{self.device_id}_count", lambda x: x + temperature.shape[0])
 
+        self.add_temperature_handler(write_temperature)
+        
         self.connect()
 
         self.old_ppg_packet = (
@@ -299,7 +321,9 @@ class SiFiBridgeStreamer(Process):
                 new_packet = self.sb.get_data()
                 self.process_packet(new_packet)
             except Exception as e:
-                print("Error Occurred: " + str(e))
+                print("Error Occurred maybe: ", e, "type : ", type(e), "representation : ", repr(e), " -> continuing.")
+                import traceback
+                traceback.print_exc()
                 continue
             if self.signal.is_set():
                 self.cleanup()
