@@ -49,6 +49,8 @@ def sifi_biopoint_streamer(
     
     device: string, default = BioPoint_v1_3
         The name or MAC of the device.
+    device_id : int | None
+        If multiple devices are connected, this is the device ID to differentiate them. None by default (just one device).
     shared_memory_items, default = []
         The key, size, datatype, and multiprocessing Lock for all data to be shared between processes.
     ecg, default = False
@@ -108,7 +110,6 @@ def sifi_biopoint_streamer(
             shared_memory_items.append(["ppg",       (200,4), np.double])
             shared_memory_items.append(["ppg_count", (1,1),    np.int32])
 
-    # if device_id is None or device_id == "" or device_id == 0:
     for item in shared_memory_items:
         item.append(Lock())
         
@@ -135,6 +136,7 @@ def sifi_biopoint_streamer(
 
 def sifi_bioarmband_streamer(
     name = "BioPoint_v1_1",
+    device_id = None,
     shared_memory_items = None,
     ecg = False,
     emg = True, 
@@ -164,6 +166,8 @@ def sifi_bioarmband_streamer(
     
     name: string, default = BioArmband
         The name of the Sifi Device. For example: BioArmband, BioPoint_v1_3, etc.
+    device_id : int | None
+        If multiple devices are connected, this is the device ID to differentiate them. None by default (just one device).
     shared_memory_items, default = []
         The key, size, datatype, and multiprocessing Lock for all data to be shared between processes.
     ecg, default = False
@@ -229,6 +233,7 @@ def sifi_bioarmband_streamer(
         
     sb = SiFiBridgeStreamer(
         name,
+        device_id,
         shared_memory_items,
         ecg,
         emg,

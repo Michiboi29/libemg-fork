@@ -18,6 +18,8 @@ class SiFiBridgeStreamer(Process):
     ----------
     name : str
         The name of the devie (eg BioArmband, BioPoint_v1_2, BioPoint_v1_3, etc.). None to auto-connect to any device.
+    device_id : int | None
+        If multiple devices are connected, this is the device ID to differentiate them. None by default (just one device).
     shared_memory_items : list
         Shared memory configuration parameters for the streamer in format:
         ["tag", (size), datatype, Lock()].
@@ -135,7 +137,7 @@ class SiFiBridgeStreamer(Process):
             print(f"Could not connect to {self.handle}. Retrying.")
 
         self.connected = True
-        print("Connected to Sifi device.")
+        print(f"Connected to Sifi device{self.device_id}.")
 
         self.sb.stop()
         self.sb.start()
