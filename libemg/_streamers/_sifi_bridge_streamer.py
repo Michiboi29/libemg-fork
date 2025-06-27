@@ -129,8 +129,6 @@ class SiFiBridgeStreamer(Process):
         self.sb.set_low_latency_mode(streaming)
         self.sb.set_ble_power(ble_power)
         self.sb.set_memory_mode(memory_mode)
-        
-        
 
     def connect(self):
         while not self.sb.connect(self.handle):

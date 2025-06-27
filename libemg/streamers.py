@@ -256,7 +256,8 @@ def myo_streamer(
     shared_memory_items : list | None = None,
     emg                 : bool = True, 
     imu                 : bool = False,
-    filtered            : bool=True):
+    filtered            : bool=True,
+    addr                : list | None = None):
     """The streamer for the myo armband. 
 
     This function connects to the Myo. It leverages the PyoMyo 
@@ -273,6 +274,9 @@ def myo_streamer(
         Specifies whether IMU data should be forwarded to shared memory.
     filtered : bool (optional), default=True
         If True, the data is the filtered data. Otherwise it is the raw unfiltered data.
+    addr : list (optional)
+        The MAC address of the Myo armband to connect to. Addr is the MAC address in format: [93, 41, 55, 245, 82, 194]
+        If None, it will connect to the first Myo it finds.
     Returns
     ----------
     Object: streamer
@@ -294,7 +298,7 @@ def myo_streamer(
 
     for item in shared_memory_items:
         item.append(Lock())
-    myo = MyoStreamer(filtered, emg, imu, shared_memory_items)
+    myo = MyoStreamer(filtered, emg, imu, shared_memory_items, addr)
     myo.start()
     return myo, shared_memory_items
 
