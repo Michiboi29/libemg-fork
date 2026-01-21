@@ -13,6 +13,7 @@ if platform.system() != 'Linux':
 else: 
     from libemg._streamers._oymotion_streamer import OyMotionStreamer
 from libemg._streamers._emager_streamer import EmagerStreamer
+from libemg._streamers._emagerv3_streamer import EmagerV3Streamer
 from libemg._streamers._sifi_bridge_streamer import SiFiBridgeStreamer
 from libemg._streamers._leap_streamer import LeapStreamer
 from libemg._streamers._mindrove import MindroveStreamer
@@ -737,3 +738,41 @@ def otb_muovi_plus_streamer(shared_memory_items = None,
     muoviplus.start()
 
     return muoviplus, shared_memory_items
+
+def emagerv3_streamer(shared_memory_items=None, **kwargs):  # Rajouter version comme argument
+    """
+    The streamer for the emager armband.
+
+    For v3.0 NEW frames, this exposes modalities:
+      - 'emg'          : (H,64) float64 rolling buffer (rows = EMG samples)
+      - 'imu'          : (H,6)  int16  rolling buffer (rows = IMU samples)
+      - 'sample_id'     : (H,1)  int64  aligned row-for-row with EMG samples
+
+    And counts:
+      - 'emg_count', 'imu_count', 'sample_id_count' as (1,1) int64
+
+    Returns:
+      streamer_process, shared_memory_items
+    """
+    if shared_memory_items is None:
+        shared_memory_items = []
+
+        # EMG samples buffer (rows are time samples)
+        shared_memory_items.append(['emg', (2000, 64), np.uint16])
+        shared_memory_items.append(['emg_count', (1, 1), np.int64])
+
+        # IMU samples (rows are IMU samples; 6 axes int16)
+        shared_memory_items.append(['imu', (2000, 6), np.int16])
+        shared_memory_items.append(['imu_count', (1, 1), np.int64])
+
+        # Frame ID aligned with EMG rows
+        shared_memory_items.append(['sample_id', (2000, 1), np.int64])
+        shared_memory_items.append(['sample_id_count', (1, 1), np.int64])
+
+    # Add locks if missing (LibEMG pattern)
+    for item in shared_memory_items:
+        item.append(Lock())
+
+    ema = EmagerV3Streamer(shared_memory_items, emager_kwargs=kwargs)
+    ema.start()
+    return ema, shared_memory_items
