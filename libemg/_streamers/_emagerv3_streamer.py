@@ -96,6 +96,8 @@ class Emager3:
                 ports_info.append(f"{dev} - {desc} (VID: {vid}, PID: {pid})")
             avail = "\n".join(f"  - {pi}" for pi in ports_info) if ports_info else "  (no serial ports found)"
             raise RuntimeError(f"Could not find serial port for Emager3. Available ports:\n{avail}")
+        else:
+            print(f"Emager3: Using serial port {com_port}")
 
         # non-blocking; we buffer ourselves
         self.ser = serial.Serial(com_port, baud_rate, timeout=0)
