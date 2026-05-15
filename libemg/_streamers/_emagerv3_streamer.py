@@ -16,17 +16,6 @@ from libemg.shared_memory_manager import SharedMemoryManager
 # Emager3 (v3.0) 8192-byte frames with packed 12-bit EMG + IMU + counter
 # ============================================================
 
-def unpack_12bit_be(packed: bytes, n_values: int) -> np.ndarray:
-    b = np.frombuffer(packed, dtype=np.uint8).astype(np.uint16)
-
-    out = np.empty((2 * (len(b) // 3),), dtype=np.uint16)
-
-    out[0::2] = (b[0::3] << 4) | (b[1::3] >> 4)
-    out[1::2] = ((b[1::3] & 0x0F) << 8) | b[2::3]
-
-    return out[:n_values]
-
-
 class Emager3:
     """
     Reader for Emager v3.0 frame format (8192 bytes total):
@@ -68,8 +57,7 @@ class Emager3:
     IMU_AXES = 6
     IMU_BYTES_PER_SAMPLE = IMU_AXES * 2  # int16 per axis
 
-    def __init__(self, baud_rate: int, com_name=None, vid_pid=(12259, 256), debug=False,):
-        self.debug_mode = bool(debug)
+    def __init__(self, baud_rate: int, com_name=None, vid_pid=(12259, 256)):
         self.com_name = com_name
         self.vid_pid = vid_pid
 
@@ -96,8 +84,6 @@ class Emager3:
                 ports_info.append(f"{dev} - {desc} (VID: {vid}, PID: {pid})")
             avail = "\n".join(f"  - {pi}" for pi in ports_info) if ports_info else "  (no serial ports found)"
             raise RuntimeError(f"Could not find serial port for Emager3. Available ports:\n{avail}")
-        else:
-            print(f"Emager3: Using serial port {com_port}")
 
         # non-blocking; we buffer ourselves
         self.ser = serial.Serial(com_port, baud_rate, timeout=0)
@@ -144,6 +130,18 @@ class Emager3:
     def _emit_frame(self, frame_id: int, emg_block: np.ndarray, imu_block: np.ndarray):
         for h in self.frame_handlers:
             h(int(frame_id), emg_block, imu_block)
+
+    def _unpack_12bit_be(self, packed: bytes, n_values: int) -> np.ndarray:
+        """
+        Emager3 (v3.0) 8192-byte frames with packed 12-bit EMG + IMU + counter
+        Unpacks the 8064-byte EMG payload into 5376 uint16 values.
+        """
+        
+        b = np.frombuffer(packed, dtype=np.uint8).astype(np.uint16)
+        out = np.empty((2 * (len(b) // 3),), dtype=np.uint16)
+        out[0::2] = (b[0::3] << 4) | (b[1::3] >> 4)
+        out[1::2] = ((b[1::3] & 0x0F) << 8) | b[2::3]
+        return out[:n_values]
 
     def get_data(self) -> bool:
         """
@@ -200,7 +198,7 @@ class Emager3:
                         self.ctr_miss += 1
                 self.last_ctr = frame_id
 
-                # IMU sample count (DO NOT TOUCH / DO NOT CLAMP per your request)
+                # IMU sample count 
                 imu_nsamp = int(self._buf[h + self.IMU_NSAMPLES_I])
                 imu_bytes_used = imu_nsamp * self.IMU_BYTES_PER_SAMPLE
 
@@ -208,7 +206,7 @@ class Emager3:
                 imu_bytes = bytes(self._buf[h + self.IMU_START: h + self.IMU_START + imu_bytes_used])
 
                 # decode EMG -> (84,64) uint16
-                emg_vals = unpack_12bit_be(emg_bytes, n_values=self.EMG_VALUES_PER_FRAME)
+                emg_vals = self._unpack_12bit_be(emg_bytes, n_values=self.EMG_VALUES_PER_FRAME)
                 emg_block = emg_vals.reshape(self.SAMPLES_PER_CH_PER_FRAME, self.CHANNELS)
 
                 # decode IMU -> (N,6) int16
@@ -264,9 +262,8 @@ class EmagerV3Streamer(Process):
         baud = int(bw.get("baud_rate", 3000000))
         com_name = bw.get("com_name", None)
         vid_pid = bw.get("vid_pid", (12259, 256))
-        debug = bool(bw.get("debug", False))
 
-        self.e = Emager3(baud_rate=baud, com_name=com_name, vid_pid=vid_pid, debug=debug)
+        self.e = Emager3(baud_rate=baud, com_name=com_name, vid_pid=vid_pid)
         self.e.connect()
         self.e.clear_buffer()
 
@@ -348,7 +345,6 @@ class EmagerV3Streamer(Process):
             while not self._stop_event.is_set():
                 did = self.e.get_data()
                 if not did:
-                    n = self._q.qsize()
                     time.sleep(0.001)  # 1 ms backoff when no complete frame parsed
         finally:
             self._cleanup()
