@@ -14,6 +14,7 @@ else:
     from libemg._streamers._oymotion_streamer import OyMotionStreamer
 from libemg._streamers._emager_streamer import EmagerStreamer
 from libemg._streamers._emagerv3_streamer import EmagerV3Streamer
+from libemg._streamers._emagerPuck_streamer import EmagerPuckStreamer
 from libemg._streamers._sifi_bridge_streamer import SiFiBridgeStreamer
 from libemg._streamers._leap_streamer import LeapStreamer
 from libemg._streamers._mindrove import MindroveStreamer
@@ -566,6 +567,48 @@ def emagerv3_streamer(shared_memory_items=None, **kwargs):
     ema.start()
     return ema, shared_memory_items
 
+
+def emagerPuck_streamer(shared_memory_items=None, **kwargs):
+    """The streamer for the EMaGer Puck / 32-channel device.
+
+    Connects to the 32-channel EMaGer Puck device using the 8192-byte framed
+    protocol with packed 15-bit EMG samples and exposes decoded samples via
+    shared memory.
+
+    Parameters
+    ----------
+    shared_memory_items : list, optional
+        Shared memory configuration parameters for the streamer in format:
+        ["tag", (size), datatype].
+
+    kwargs : dict
+        Passed to EmagerPuckStreamer. Supported keys will include:
+        baud_rate, com_name, vid_pid, debug.
+
+    The default shared memory exposes:
+      - 'emg'       : (2000, 32) int16 rolling buffer
+      - 'emg_count' : (1, 1) int64
+
+    Returns
+    -------
+    Object
+        The streamer object.
+    Object
+        The shared memory items.
+    """
+
+    if shared_memory_items is None:
+        shared_memory_items = []
+        shared_memory_items.append(['emg', (2000, 32), np.int16])
+        shared_memory_items.append(['emg_count', (1, 1), np.int64])
+
+    for item in shared_memory_items:
+        if len(item) == 3:
+            item.append(Lock())
+
+    ema = EmagerPuckStreamer(shared_memory_items, emager_kwargs=kwargs)
+    ema.start()
+    return ema, shared_memory_items
 
 #TODO: Update docs
 def leap_streamer(shared_memory_items : list | None =None,
