@@ -56,6 +56,10 @@ class EmagerPuck:
     EMG_VALUES_PER_FRAME = 4352
     SAMPLES_PER_CH_PER_FRAME = EMG_VALUES_PER_FRAME // CHANNELS  # 136
 
+    CHANNEL_ORDER = np.array([
+        5,6,4,7,15,14,13,12,27,24,26,25,28,29,30,31,22,20,23,21,16,18,17,19,8,10,9,11,0,1,2,3 # 0,1,2,3 could be wrong
+    ], dtype=np.int64)
+
     def __init__(
         self,
         baud_rate: int = 3000000,
@@ -268,6 +272,10 @@ class EmagerPuck:
                         self.SAMPLES_PER_CH_PER_FRAME,
                         self.CHANNELS,
                     )
+
+                    # Reorder channels.
+                    # emg_block shape is (samples, channels), so we reorder columns.
+                    emg_block = emg_block[:, self.CHANNEL_ORDER]
 
                     self._emit_frame(frame_id, emg_block)
                     emitted_any = True
